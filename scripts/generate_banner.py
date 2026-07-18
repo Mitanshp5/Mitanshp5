@@ -160,6 +160,23 @@ def safe_color(value: str) -> str:
     return value if re.fullmatch(r"#[0-9a-fA-F]{6}", value) else DEFAULT_BAR_COLOR
 
 
+def estimate_width(text: str, font_size: int, font_weight: str = "normal") -> float:
+    """Rough heuristic for Arial text width since exact font metrics aren't easily available."""
+    width = 0.0
+    for char in text:
+        if char in "ijlI1.,' ":
+            width += 0.3 * font_size
+        elif char in "WwMmO0Q@":
+            width += 0.85 * font_size
+        elif char.isupper():
+            width += 0.7 * font_size
+        else:
+            width += 0.55 * font_size
+    if font_weight == "bold":
+        width *= 1.1
+    return width
+
+
 def banner(data: dict) -> str:
     is_playing = data["mode"].startswith("NOW PLAYING")
     title = escape(fit_text(data["title"], 27))
@@ -180,6 +197,13 @@ def banner(data: dict) -> str:
         for i, height in enumerate(bar_heights)
     )
     title_fill = "#f4ff00" if not is_playing else "#f8f8f8"
+    
+    # Selectively squish title if it's too long
+    title_width = estimate_width(data["title"], 61, "bold")
+    title_attrs = ' class="track"'
+    if title_width > 850:
+        title_attrs += ' textLength="850" lengthAdjust="spacingAndGlyphs"'
+
     return f'''<svg xmlns="http://www.w3.org/2000/svg" width="1983" height="793" viewBox="0 0 1983 793" role="img" aria-labelledby="title desc">
   <title id="title">What's Up Danger — {title}</title>
   <desc id="desc">Miles Morales profile banner. {mode}: {title} by {artist}.</desc>
@@ -201,7 +225,7 @@ def banner(data: dict) -> str:
   <rect x="64" y="164" width="1410" height="465" rx="35" fill="url(#card)" stroke="#202b34" stroke-width="2"/>
   <image href="{cover}" x="122" y="215" width="328" height="328" preserveAspectRatio="xMidYMid slice" clip-path="url(#coverClip)"/>
   <text x="490" y="304" class="label">Now Playing</text>
-  <text x="490" y="381" class="track" textLength="850" lengthAdjust="spacingAndGlyphs">{title}</text>
+  <text x="490" y="381"{title_attrs}>{title}</text>
   <text x="490" y="432" class="artist" clip-path="url(#artistClip)">by {artist}</text>
   {bars}
 </svg>\n'''
